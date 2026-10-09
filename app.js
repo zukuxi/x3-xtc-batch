@@ -1,6 +1,125 @@
 import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.624/pdf.min.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.624/pdf.worker.min.mjs';
 const W=528,H=792,$=id=>document.getElementById(id);
+const languageSelect=$('language');
+let currentLanguage='zh';
+const exactTranslations={
+'X3 PDF 跨页拼接批量转换 XTC/XTCH':'X3 PDF Stitching Batch Converter to XTC/XTCH',
+'基于现有轻量转换器改版。支持多选 PDF、整文件夹、每份 PDF 内部跨页连续拼接，以及每 N 个 PDF 合并成一个 XTC/XTCH 文件；文件只在本机浏览器处理，不会上传。':'A modified lightweight converter supporting multiple PDFs, folder import, continuous stitching within each PDF, and merging every N PDFs into one XTC/XTCH file. All processing happens locally in your browser; files are never uploaded.',
+'选择一个或多个 PDF':'Select one or more PDF files',
+'可按住 Ctrl / Shift 多选':'Hold Ctrl / Shift to select multiple files',
+'选择整个文件夹':'Select a folder',
+'自动筛选文件夹中的 PDF':'PDF files in the folder will be selected automatically',
+'灰度模式':'Grayscale mode',
+'4 灰阶（2bit / XTCH）':'4-level grayscale (2-bit / XTCH)',
+'黑白（1bit / XTC）':'Black and white (1-bit / XTC)',
+'抖动算法':'Dithering algorithm',
+'Atkinson（漫画推荐）':'Atkinson (recommended for comics)',
+'Floyd–Steinberg':'Floyd–Steinberg',
+'无抖动 / 阈值':'No dithering / Threshold',
+'黑白阈值（仅 1bit 无抖动）':'Black-and-white threshold (1-bit, no dithering only)',
+'标准（128）':'Standard (128)',
+'偏黑（105）':'Darker (105)',
+'偏白（150）':'Lighter (150)',
+'每几个 PDF 合并成一本':'Merge every N PDFs into one file',
+'1 个（每份 PDF 单独输出）':'1 (one output per PDF)',
+'每 2 个 PDF 合并':'Merge every 2 PDFs',
+'每 3 个 PDF 合并':'Merge every 3 PDFs',
+'每 4 个 PDF 合并':'Merge every 4 PDFs',
+'每 5 个 PDF 合并':'Merge every 5 PDFs',
+'每 10 个 PDF 合并':'Merge every 10 PDFs',
+'每 20 个 PDF 合并':'Merge every 20 PDFs',
+'书名（可选）':'Book title (optional)',
+'默认使用文件名自动命名':'Uses the filename by default',
+'蒙版兼容模式（使用 PDF.js 的打印渲染路径，尝试兼容复杂蒙版/透明层）':'Mask compatibility mode (uses PDF.js print rendering to handle complex masks/transparency)',
+'如果某个 PDF 转出黑屏，可勾选后再试；默认使用速度更快的标准显示路径。不同 PDF 的蒙版实现可能不同，此开关不保证修复所有文件。':'If a PDF converts to a black page, enable this option and try again. The faster standard display renderer is used by default. Mask implementations vary, so this option cannot guarantee a fix for every file.',
+'目标尺寸固定为 X3 的 528 × 792。每份 PDF 内的页面连续拼接；每份 PDF 结束时，未满 792 行的最后一页用白色补齐，下一份 PDF 从新的 XTC 页面开始。采用分段渲染和行缓冲拼接，不会先导出整套 JPG。添加 PDF 后会自动生成最终 XTC 页面预览；调整灰度、抖动、阈值或蒙版设置时会重新预览。每组结果可单独下载，也可打包 ZIP。':'The target size is fixed at 528 × 792 for X3. Pages are stitched continuously within each PDF. Any final page shorter than 792 rows is padded with white, and the next PDF starts on a new XTC page. Rendering and stitching use row buffers; no full set of JPGs is exported first. A final XTC page preview is generated automatically after adding PDFs and refreshed when processing settings change. Each output can be downloaded separately or packaged into a ZIP.',
+'转换队列':'Conversion queue',
+'清空队列':'Clear queue',
+'请先选择 PDF 文件或文件夹。':'Select PDF files or a folder to begin.',
+'开始转换':'Start conversion',
+'取消当前批次':'Cancel current batch',
+'下载全部成功结果 ZIP':'Download ZIP of all successful outputs',
+'请选择 PDF 文件或文件夹。':'Select PDF files or a folder.',
+'最终 XTC 页面预览':'Final XTC page preview',
+'选择 PDF 后立即生成；预览展示第一份 PDF 内部连续拼接、灰度与抖动处理后的第一张 528 × 792 XTC 页面。调整参数后会自动更新。':'Generated as soon as a PDF is selected. The preview shows the first 528 × 792 XTC page after continuous stitching, grayscale conversion, and dithering of the first PDF. It updates automatically when settings change.',
+'编码参考：':'Encoding structure based on ',
+' 的 XTG、XTH 与 XTC 容器结构。ZIP 使用 JSZip；PDF 使用 PDF.js。GitHub Pages 可直接托管。':' for the XTG, XTH, and XTC container formats. ZIP uses JSZip and PDF rendering uses PDF.js. The app can be hosted directly on GitHub Pages.',
+'转换后的灰度预览':'Grayscale conversion preview',
+'预览已更新。模式：':'Preview updated. Mode: ',
+'4 灰阶 XTCH':'4-level grayscale XTCH',
+'黑白 XTC':'Black-and-white XTC',
+'；显示第一份 PDF 内部连续拼接后的第一页。':'; showing the first stitched page from the first PDF.',
+'正在生成最终页面预览…':'Generating final page preview…',
+'预览生成失败：':'Preview generation failed: ',
+'没有找到 PDF 文件。请选择 PDF 文件，或用文件夹选择器导入。':'No PDF files found. Select PDF files or use the folder picker to import them.',
+'这些 PDF 已在队列中，没有重复添加。':'These PDFs are already in the queue and were not added again.',
+'队列已清空。':'Queue cleared.',
+'源 PDF 文件':'Source PDF files',
+'下载 XTC':'Download XTC',
+'已加入 ':'Added ',
+' 个 PDF。预览会显示拼接和参数处理后的第一页。':' PDF(s). The preview will show the first page after stitching and processing.',
+'ZIP 组件未能加载，请检查网络后刷新页面再试。':'The ZIP library failed to load. Check your connection and refresh the page.',
+'正在打包 ':'Packaging ',
+' 个结果为 ZIP…':' output(s) into a ZIP…',
+'正在打包 ZIP：':'Packaging ZIP: ',
+'ZIP 打包完成。包含 ':'ZIP created. Contains ',
+' 个文件，大小 ':' file(s), size ',
+'ZIP 打包失败：':'ZIP creation failed: ',
+'本批次已取消。完成 ':'Batch cancelled. Completed ',
+' 组，失败 ':' group(s), failed ',
+' 组；未处理文件仍保留在队列中。':' group(s). Unprocessed files remain in the queue.',
+'本批次结束。成功 ':'Batch finished. Successful ',
+' 组。失败 ':' group(s). Failed ',
+' 组。':' group(s).',
+'每组生成一个 XTC/XTCH 文件。':'One XTC/XTCH file is generated per group.',
+'每份 PDF 单独输出。':'Each PDF is output separately.',
+'可下载转换结果，或另行打包 ZIP。':'Download the converted files or package them into a ZIP.',
+'已设置每 ':'Set to merge every ',
+' 个 PDF 合并为一个 XTC/XTCH；预览正在更新。':' PDF(s) into one XTC/XTCH file. Updating preview.',
+'正在取消；当前渲染段结束后会停止。':'Cancelling; processing will stop after the current render segment.',
+'正在转换第 ':'Converting group ',
+' 组：':' : ',
+'XTC 页面已生成：':'XTC pages generated: ',
+'正在封装第 ':'Building output for group ',
+'组…':'…',
+'已取消':'Cancelled',
+'等待转换':'Waiting',
+'转换中':'Converting',
+'完成':'Complete',
+'失败':'Failed',
+'已合并':'Merged',
+'输出：':'Output: ',
+'合并 ':'Merged ',
+' 个 X3 页面':' X3 pages',
+' 个 PDF':' PDF(s)',
+'源 PDF 文件':'Source PDF files',
+'合并组':'Merge group',
+' · 文件 ':' · File ',
+' · PDF 页 ':' · PDF page ',
+'页 ':'Page ',
+'组 ':'Group ',
+'文件 ':'File ',
+' · 输出：':' · Output: '
+};
+const phraseTranslations=Object.entries(exactTranslations).sort((a,b)=>b[0].length-a[0].length);
+function translateText(value){
+  if(currentLanguage!=='en'||typeof value!=='string')return value;
+  if(Object.prototype.hasOwnProperty.call(exactTranslations,value))return exactTranslations[value];
+  let out=value;
+  for(const [zh,en] of phraseTranslations){if(zh&&out.includes(zh))out=out.split(zh).join(en);}
+  return out;
+}
+const originalTextNodes=new Map();
+function translateStaticText(){
+  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+  let node;while((node=walker.nextNode())){if(!originalTextNodes.has(node))originalTextNodes.set(node,node.nodeValue);const original=originalTextNodes.get(node);node.nodeValue=currentLanguage==='en'?translateText(original):original;}
+  document.documentElement.lang=currentLanguage==='en'?'en':'zh-CN';
+  document.title=currentLanguage==='en'?'X3 PDF Stitching Batch Converter to XTC/XTCH':'X3 PDF 跨页拼接批量转换 XTC/XTCH';
+}
+function applyLanguage(){currentLanguage=languageSelect.value;translateStaticText();renderQueue();if(queueItems.length&&!processing)schedulePreview();}
+languageSelect.addEventListener('change',applyLanguage);
+
 function dither(gray,w,h,mode,depth,threshold){
   const a=new Float32Array(gray);
   for(let y=0;y<h;y++){
@@ -40,7 +159,7 @@ const queueItems=[];
 const groupResults=[];
 const collator=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'});
 let cancelled=false,processing=false,previewToken=0,previewTimer=null;
-function setStatus(s,p){status.textContent=s;if(p!=null)bar.style.width=`${Math.max(0,Math.min(100,p))}%`;}
+function setStatus(s,p){status.textContent=translateText(s);if(p!=null)bar.style.width=`${Math.max(0,Math.min(100,p))}%`;}
 function humanSize(n){if(!Number.isFinite(n))return '';const units=['B','KB','MB','GB'];let i=0,v=n;while(v>=1024&&i<units.length-1){v/=1024;i++;}return `${v.toFixed(i?2:0)} ${units[i]}`;}
 function fileKey(file){return `${file.name}\0${file.size}\0${file.lastModified}\0${file.webkitRelativePath||''}`;}
 function displayName(item){return item.file.webkitRelativePath||item.file.name;}
@@ -50,16 +169,16 @@ function mergeCount(){return Math.max(1,Number($('mergeCount').value)||1);}
 function syncButtons(){go.disabled=processing||pendingItems().length===0;cancel.disabled=!processing;clear.disabled=processing||queueItems.length===0;zipButton.disabled=processing||successItems().length===0;fileInput.disabled=processing;folderInput.disabled=processing;}
 function updateQueueItem(item){
   if(mergeCount()>1){const record=groupResults.find(r=>r.items?.includes(item));if(record&&record.items.length)record.progress=Math.round(record.items.reduce((sum,x)=>sum+(x.progress||0),0)/record.items.length);renderQueue();return;}
-  const index=queueItems.indexOf(item),li=queueList.children[index];if(!li)return;const detail=li.querySelector('.file-detail'),state=li.querySelector('.file-state');if(detail)detail.textContent=`${humanSize(item.file.size)}${item.outputName?` · 输出：${item.outputName}`:''}${item.error?` · ${item.error}`:''}${item.detail?` · ${item.detail}`:''}`;if(state){state.className='file-state'+(item.state==='完成'?' ok':item.state==='失败'?' err':'');state.textContent=item.state==='转换中'?`转换中 ${Math.round(item.progress||0)}%`:item.state;}}
+  const index=queueItems.indexOf(item),li=queueList.children[index];if(!li)return;const detail=li.querySelector('.file-detail'),state=li.querySelector('.file-state');if(detail)detail.textContent=translateText(`${humanSize(item.file.size)}${item.outputName?` · 输出：${item.outputName}`:''}${item.error?` · ${translateText(item.error)}`:''}${item.detail?` · ${translateText(item.detail)}`:''}`);if(state){state.className='file-state'+(item.state==='完成'?' ok':item.state==='失败'?' err':'');state.textContent=translateText(item.state==='转换中'?`转换中 ${Math.round(item.progress||0)}%`:item.state);}}
 function renderQueue(){
-  $('queueCount').textContent=`（${queueItems.length} 个 PDF）`;queueList.replaceChildren();
-  if(!queueItems.length){const li=document.createElement('li');li.className='hint';li.textContent='请先选择 PDF 文件或文件夹。';queueList.append(li);syncButtons();return;}
+  $('queueCount').textContent=currentLanguage==='en'?`(${queueItems.length} PDF${queueItems.length===1?'':'s'})`:`（${queueItems.length} 个 PDF）`;queueList.replaceChildren();
+  if(!queueItems.length){const li=document.createElement('li');li.className='hint';li.textContent=translateText('请先选择 PDF 文件或文件夹。');queueList.append(li);syncButtons();return;}
   if(mergeCount()>1){
-    for(const result of groupResults){const li=document.createElement('li');li.className='group-output';const info=document.createElement('div');info.className='file-info';const name=document.createElement('div');name.className='filename';name.textContent=`输出：${result.outputName}`;const detail=document.createElement('div');detail.className='file-detail';detail.textContent=`合并 ${result.files.length} 个 PDF${result.xtcPages!=null?` · ${result.xtcPages} 个 X3 页面`:''}${result.size?` · ${humanSize(result.size)}`:''}${result.error?` · ${result.error}`:''}`;info.append(name,detail);const state=document.createElement('span');state.className='file-state'+(result.state==='完成'?' ok':result.state==='失败'?' err':'');state.textContent=result.state==='转换中'?`转换中 ${Math.round(result.progress||0)}%`:result.state;li.append(info,state);if(result.blob){const btn=document.createElement('button');btn.className='secondary small';btn.textContent='下载 XTC';btn.addEventListener('click',()=>downloadBlob(result.blob,result.outputName));li.append(btn);}queueList.append(li);}
-    const sourceHead=document.createElement('li');sourceHead.className='hint';sourceHead.textContent='源 PDF 文件';queueList.append(sourceHead);
+    for(const result of groupResults){const li=document.createElement('li');li.className='group-output';const info=document.createElement('div');info.className='file-info';const name=document.createElement('div');name.className='filename';name.textContent=translateText(`输出：${result.outputName}`);const detail=document.createElement('div');detail.className='file-detail';detail.textContent=translateText(`合并 ${result.files.length} 个 PDF${result.xtcPages!=null?` · ${result.xtcPages} 个 X3 页面`:''}${result.size?` · ${humanSize(result.size)}`:''}${result.error?` · ${result.error}`:''}`);info.append(name,detail);const state=document.createElement('span');state.className='file-state'+(result.state==='完成'?' ok':result.state==='失败'?' err':'');state.textContent=translateText(result.state==='转换中'?`转换中 ${Math.round(result.progress||0)}%`:result.state);li.append(info,state);if(result.blob){const btn=document.createElement('button');btn.className='secondary small';btn.textContent=translateText('下载 XTC');btn.addEventListener('click',()=>downloadBlob(result.blob,result.outputName));li.append(btn);}queueList.append(li);}
+    const sourceHead=document.createElement('li');sourceHead.className='hint';sourceHead.textContent=translateText('源 PDF 文件');queueList.append(sourceHead);
     queueItems.forEach((item,index)=>{const li=document.createElement('li');const info=document.createElement('div');info.className='file-info';const name=document.createElement('div');name.className='filename';name.textContent=`${index+1}. ${displayName(item)}`;const detail=document.createElement('div');detail.className='file-detail';detail.textContent=humanSize(item.file.size);info.append(name,detail);li.append(info);queueList.append(li);});
   }else{
-    queueItems.forEach((item,index)=>{const li=document.createElement('li');const info=document.createElement('div');info.className='file-info';const name=document.createElement('div');name.className='filename';name.textContent=`${index+1}. ${displayName(item)}`;const detail=document.createElement('div');detail.className='file-detail';detail.textContent=`${humanSize(item.file.size)}${item.outputName?` · 输出：${item.outputName}`:''}${item.error?` · ${item.error}`:''}${item.detail?` · ${item.detail}`:''}`;info.append(name,detail);const state=document.createElement('span');state.className='file-state'+(item.state==='完成'?' ok':item.state==='失败'?' err':'');state.textContent=item.state==='转换中'?`转换中 ${Math.round(item.progress||0)}%`:item.state;li.append(info,state);if(item.blob){const btn=document.createElement('button');btn.className='secondary small';btn.textContent='下载 XTC';btn.addEventListener('click',()=>downloadBlob(item.blob,item.outputName));li.append(btn);}queueList.append(li);});
+    queueItems.forEach((item,index)=>{const li=document.createElement('li');const info=document.createElement('div');info.className='file-info';const name=document.createElement('div');name.className='filename';name.textContent=`${index+1}. ${displayName(item)}`;const detail=document.createElement('div');detail.className='file-detail';detail.textContent=translateText(`${humanSize(item.file.size)}${item.outputName?` · 输出：${item.outputName}`:''}${item.error?` · ${translateText(item.error)}`:''}${item.detail?` · ${translateText(item.detail)}`:''}`);info.append(name,detail);const state=document.createElement('span');state.className='file-state'+(item.state==='完成'?' ok':item.state==='失败'?' err':'');state.textContent=translateText(item.state==='转换中'?`转换中 ${Math.round(item.progress||0)}%`:item.state);li.append(info,state);if(item.blob){const btn=document.createElement('button');btn.className='secondary small';btn.textContent=translateText('下载 XTC');btn.addEventListener('click',()=>downloadBlob(item.blob,item.outputName));li.append(btn);}queueList.append(li);});
   }
   syncButtons();
 }
@@ -147,5 +266,6 @@ async function convertGroup(group,groupIndex,totalGroups){
 }
 
 go.addEventListener('click',async()=>{const todo=pendingItems();if(!todo.length||processing)return;const groups=groupPending(todo);processing=true;cancelled=false;syncButtons();let finished=0,failed=0;for(let gi=0;gi<groups.length;gi++){if(cancelled)break;const group=groups[gi];const record={files:group.map(x=>x.file),items:group,outputName:outputTitle(group.map(x=>x.file),gi),state:'转换中',progress:0,blob:null,xtcPages:null,size:0,error:''};if(mergeCount()>1)groupResults.push(record);for(const item of group){item.state='转换中';item.progress=0;item.error='';}renderQueue();try{const result=await convertGroup(group,gi,groups.length);record.blob=result.blob;record.outputName=result.outputName;record.state='完成';record.progress=100;record.xtcPages=result.xtcPages;record.size=result.size;const first=group[0];first.blob=result.blob;first.outputName=result.outputName;first.state='完成';first.progress=100;first.detail=`合并 ${group.length} 个 PDF · ${result.xtcPages} 个 X3 页面`;first.pageCount=result.pdfPageCount;first.size=result.size;for(const item of group.slice(1)){item.state='已合并';item.detail='';item.progress=100;}finished++;}catch(error){record.state=error?.message==='已取消'?'已取消':'失败';record.error=error?.message||String(error);for(const item of group){item.state=error?.message==='已取消'?'已取消':'失败';item.error=error?.message||String(error);}if(error?.message!=='已取消'&&!cancelled)failed++;if(!cancelled)console.error(error);}renderQueue();if(cancelled)break;}processing=false;syncButtons();if(cancelled)setStatus(`本批次已取消。完成 ${finished} 组，失败 ${failed} 组；未处理文件仍保留在队列中。`,null);else setStatus(`本批次结束。成功 ${finished} 组，失败 ${failed} 组。${mergeCount()>1?'每组生成一个 XTC/XTCH 文件。':'每份 PDF 单独输出。'} ${successItems().length?'可下载转换结果，或另行打包 ZIP。':''}`,100);});
-zipButton.addEventListener('click',async()=>{const ready=successItems();if(!ready.length||processing)return;if(!window.JSZip){setStatus('ZIP 组件未能加载，请检查网络后刷新页面再试。',0);return;}zipButton.disabled=true;try{const zip=new window.JSZip(),used=new Set();for(const item of ready){let name=item.outputName||'converted.xtc',base=name,seq=2;while(used.has(name.toLowerCase())){const dot=base.lastIndexOf('.');name=dot>0?`${base.slice(0,dot)} (${seq})${base.slice(dot)}`:`${base} (${seq})`;seq++;}used.add(name.toLowerCase());zip.file(name,item.blob,{binary:true});}setStatus(`正在打包 ${ready.length} 个结果为 ZIP…`,0);const blob=await zip.generateAsync({type:'blob',compression:'STORE'},metadata=>setStatus(`正在打包 ZIP：${Math.round(metadata.percent)}%`,metadata.percent));downloadBlob(blob,'X3-XTC-批量转换结果.zip');setStatus(`ZIP 打包完成。包含 ${ready.length} 个文件，大小 ${humanSize(blob.size)}。`,100);}catch(error){console.error(error);setStatus(`ZIP 打包失败：${error?.message||error}`,0);}finally{syncButtons();}});
+zipButton.addEventListener('click',async()=>{const ready=successItems();if(!ready.length||processing)return;if(!window.JSZip){setStatus('ZIP 组件未能加载，请检查网络后刷新页面再试。',0);return;}zipButton.disabled=true;try{const zip=new window.JSZip(),used=new Set();for(const item of ready){let name=item.outputName||'converted.xtc',base=name,seq=2;while(used.has(name.toLowerCase())){const dot=base.lastIndexOf('.');name=dot>0?`${base.slice(0,dot)} (${seq})${base.slice(dot)}`:`${base} (${seq})`;seq++;}used.add(name.toLowerCase());zip.file(name,item.blob,{binary:true});}setStatus(`正在打包 ${ready.length} 个结果为 ZIP…`,0);const blob=await zip.generateAsync({type:'blob',compression:'STORE'},metadata=>setStatus(`正在打包 ZIP：${Math.round(metadata.percent)}%`,metadata.percent));downloadBlob(blob,currentLanguage==='en'?'X3-XTC-Batch-Conversion.zip':'X3-XTC-批量转换结果.zip');setStatus(`ZIP 打包完成。包含 ${ready.length} 个文件，大小 ${humanSize(blob.size)}。`,100);}catch(error){console.error(error);setStatus(`ZIP 打包失败：${error?.message||error}`,0);}finally{syncButtons();}});
+translateStaticText();
 renderQueue();
