@@ -10,6 +10,4 @@
 - 支持蒙版兼容模式、单独下载每组结果、可选 ZIP 打包。
 - 所有 PDF 都在本机浏览器中处理，不上传到服务器。
 
-## 部署
-
-将 `index.html`、`app.js` 和 `README.md` 放在 GitHub Pages 仓库根目录。页面通过 CDN 加载 PDF.js 5.4.624 和 JSZip 3.10.1。
+https://zukuxi.github.io/x3-xtc-batch/
