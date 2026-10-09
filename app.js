@@ -37,6 +37,7 @@ function safeName(name){return name.replace(/[\\/:*?\"<>|\u0000-\u001f]/g,'_').r
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name||'converted.xtc';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);}
 const fileInput=$('file'),folderInput=$('folder'),go=$('go'),cancel=$('cancel'),clear=$('clear'),zipButton=$('zip'),status=$('status'),bar=$('bar'),preview=$('preview'),queueList=$('queueList');
 const queueItems=[];
+const groupResults=[];
 const collator=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'});
 let cancelled=false,processing=false,previewToken=0,previewTimer=null;
 function setStatus(s,p){status.textContent=s;if(p!=null)bar.style.width=`${Math.max(0,Math.min(100,p))}%`;}
@@ -47,18 +48,27 @@ function pendingItems(){return queueItems.filter(item=>item.state==='等待转�
 function successItems(){return queueItems.filter(item=>item.blob);}
 function mergeCount(){return Math.max(1,Number($('mergeCount').value)||1);}
 function syncButtons(){go.disabled=processing||pendingItems().length===0;cancel.disabled=!processing;clear.disabled=processing||queueItems.length===0;zipButton.disabled=processing||successItems().length===0;fileInput.disabled=processing;folderInput.disabled=processing;}
-function updateQueueItem(item){const index=queueItems.indexOf(item),li=queueList.children[index];if(!li)return;const detail=li.querySelector('.file-detail'),state=li.querySelector('.file-state');if(detail)detail.textContent=`${humanSize(item.file.size)}${item.outputName?` · 输出：${item.outputName}`:''}${item.error?` · ${item.error}`:''}${item.detail?` · ${item.detail}`:''}`;if(state){state.className='file-state'+(item.state==='完成'?' ok':item.state==='失败'?' err':'');state.textContent=item.state==='转换中'?`转换中 ${Math.round(item.progress||0)}%`:item.state;}}
+function updateQueueItem(item){
+  if(mergeCount()>1){const record=groupResults.find(r=>r.items?.includes(item));if(record&&record.items.length)record.progress=Math.round(record.items.reduce((sum,x)=>sum+(x.progress||0),0)/record.items.length);renderQueue();return;}
+  const index=queueItems.indexOf(item),li=queueList.children[index];if(!li)return;const detail=li.querySelector('.file-detail'),state=li.querySelector('.file-state');if(detail)detail.textContent=`${humanSize(item.file.size)}${item.outputName?` · 输出：${item.outputName}`:''}${item.error?` · ${item.error}`:''}${item.detail?` · ${item.detail}`:''}`;if(state){state.className='file-state'+(item.state==='完成'?' ok':item.state==='失败'?' err':'');state.textContent=item.state==='转换中'?`转换中 ${Math.round(item.progress||0)}%`:item.state;}}
 function renderQueue(){
   $('queueCount').textContent=`（${queueItems.length} 个 PDF）`;queueList.replaceChildren();
   if(!queueItems.length){const li=document.createElement('li');li.className='hint';li.textContent='请先选择 PDF 文件或文件夹。';queueList.append(li);syncButtons();return;}
-  queueItems.forEach((item,index)=>{const li=document.createElement('li');const info=document.createElement('div');info.className='file-info';const name=document.createElement('div');name.className='filename';name.textContent=`${index+1}. ${displayName(item)}`;const detail=document.createElement('div');detail.className='file-detail';detail.textContent=`${humanSize(item.file.size)}${item.outputName?` · 输出：${item.outputName}`:''}${item.error?` · ${item.error}`:''}${item.detail?` · ${item.detail}`:''}`;info.append(name,detail);const state=document.createElement('span');state.className='file-state'+(item.state==='完成'?' ok':item.state==='失败'?' err':'');state.textContent=item.state==='转换中'?`转换中 ${Math.round(item.progress||0)}%`:item.state;li.append(info,state);if(item.blob){const btn=document.createElement('button');btn.className='secondary small';btn.textContent='下载 XTC';btn.addEventListener('click',()=>downloadBlob(item.blob,item.outputName));li.append(btn);}queueList.append(li);});syncButtons();
+  if(mergeCount()>1){
+    for(const result of groupResults){const li=document.createElement('li');li.className='group-output';const info=document.createElement('div');info.className='file-info';const name=document.createElement('div');name.className='filename';name.textContent=`输出：${result.outputName}`;const detail=document.createElement('div');detail.className='file-detail';detail.textContent=`合并 ${result.files.length} 个 PDF${result.xtcPages!=null?` · ${result.xtcPages} 个 X3 页面`:''}${result.size?` · ${humanSize(result.size)}`:''}${result.error?` · ${result.error}`:''}`;info.append(name,detail);const state=document.createElement('span');state.className='file-state'+(result.state==='完成'?' ok':result.state==='失败'?' err':'');state.textContent=result.state==='转换中'?`转换中 ${Math.round(result.progress||0)}%`:result.state;li.append(info,state);if(result.blob){const btn=document.createElement('button');btn.className='secondary small';btn.textContent='下载 XTC';btn.addEventListener('click',()=>downloadBlob(result.blob,result.outputName));li.append(btn);}queueList.append(li);}
+    const sourceHead=document.createElement('li');sourceHead.className='hint';sourceHead.textContent='源 PDF 文件';queueList.append(sourceHead);
+    queueItems.forEach((item,index)=>{const li=document.createElement('li');const info=document.createElement('div');info.className='file-info';const name=document.createElement('div');name.className='filename';name.textContent=`${index+1}. ${displayName(item)}`;const detail=document.createElement('div');detail.className='file-detail';detail.textContent=humanSize(item.file.size);info.append(name,detail);li.append(info);queueList.append(li);});
+  }else{
+    queueItems.forEach((item,index)=>{const li=document.createElement('li');const info=document.createElement('div');info.className='file-info';const name=document.createElement('div');name.className='filename';name.textContent=`${index+1}. ${displayName(item)}`;const detail=document.createElement('div');detail.className='file-detail';detail.textContent=`${humanSize(item.file.size)}${item.outputName?` · 输出：${item.outputName}`:''}${item.error?` · ${item.error}`:''}${item.detail?` · ${item.detail}`:''}`;info.append(name,detail);const state=document.createElement('span');state.className='file-state'+(item.state==='完成'?' ok':item.state==='失败'?' err':'');state.textContent=item.state==='转换中'?`转换中 ${Math.round(item.progress||0)}%`:item.state;li.append(info,state);if(item.blob){const btn=document.createElement('button');btn.className='secondary small';btn.textContent='下载 XTC';btn.addEventListener('click',()=>downloadBlob(item.blob,item.outputName));li.append(btn);}queueList.append(li);});
+  }
+  syncButtons();
 }
 function addFiles(fileList){const known=new Set(queueItems.map(i=>fileKey(i.file)));const found=Array.from(fileList||[]).filter(f=>/\.pdf$/i.test(f.name));found.sort((a,b)=>collator.compare(a.webkitRelativePath||a.name,b.webkitRelativePath||b.name));let added=0;for(const file of found){const key=fileKey(file);if(known.has(key))continue;known.add(key);queueItems.push({file,state:'等待转换',progress:0,blob:null,outputName:'',error:'',detail:''});added++;}if(added){setStatus(`已加入 ${added} 个 PDF。预览会显示拼接和参数处理后的第一页。`,0);schedulePreview();}else if(found.length===0)setStatus('没有找到 PDF 文件。请选择 PDF 文件，或用文件夹选择器导入。',0);else setStatus('这些 PDF 已在队列中，没有重复添加。',0);renderQueue();}
 fileInput.addEventListener('change',()=>{addFiles(fileInput.files);fileInput.value='';});folderInput.addEventListener('change',()=>{addFiles(folderInput.files);folderInput.value='';});
-clear.addEventListener('click',()=>{if(processing)return;queueItems.length=0;preview.style.display='none';preview.width=W;preview.height=H;preview.getContext('2d').clearRect(0,0,W,H);preview.dataset.hasPreview='';bar.style.width='0%';setStatus('队列已清空。',0);renderQueue();});
+clear.addEventListener('click',()=>{if(processing)return;queueItems.length=0;groupResults.length=0;preview.style.display='none';preview.width=W;preview.height=H;preview.getContext('2d').clearRect(0,0,W,H);preview.dataset.hasPreview='';bar.style.width='0%';setStatus('队列已清空。',0);renderQueue();});
 cancel.addEventListener('click',()=>{cancelled=true;cancel.disabled=true;setStatus(status.textContent+'\n正在取消；当前渲染段结束后会停止。');});
-$('mergeCount').addEventListener('change',()=>{setStatus(`已设置每 ${mergeCount()} 个 PDF 合并为一个 XTC/XTCH；预览正在更新。`,0);schedulePreview();});
-for(const id of ['depth','dither','threshold','maskMode','stitch','title'])$(id).addEventListener('change',schedulePreview);
+$('mergeCount').addEventListener('change',()=>{setStatus(`已设置每 ${mergeCount()} 个 PDF 合并为一个 XTC/XTCH；预览正在更新。`,0);renderQueue();schedulePreview();});
+for(const id of ['depth','dither','threshold','maskMode','title'])$(id).addEventListener('change',schedulePreview);
 $('title').addEventListener('input',schedulePreview);
 
 function makeBlankBuffer(){const b=new Uint8Array(W*H);b.fill(255);return b;}
@@ -68,15 +78,74 @@ function resetAccumulator(acc){acc.buffer=makeBlankBuffer();acc.used=0;}
 function processAccumulatedPage(acc,depth,algo,threshold,pages,previewMode=false){const processed=dither(acc.buffer,W,H,algo,depth,threshold);if(previewMode){const ctx=preview.getContext('2d',{alpha:false});preview.width=W;preview.height=H;const img=ctx.createImageData(W,H);for(let i=0,j=0;i<processed.length;i++,j+=4){const gray=processed[i];img.data[j]=gray;img.data[j+1]=gray;img.data[j+2]=gray;img.data[j+3]=255;}ctx.putImageData(img,0,0);preview.style.display='block';preview.dataset.hasPreview='1';}else pages.push(depth===2?packXTH(processed,W,H):packXTG(processed,W,H));resetAccumulator(acc);}
 async function renderPdfRows(pdf,page,top,rows,maskMode){const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);await page.render({canvasContext:ctx,canvas,viewport:page.getViewport({scale:W/page.getViewport({scale:1}).width}),transform:[1,0,0,1,0,-top],background:'rgb(255,255,255)',intent:maskMode?'print':'display'}).promise;const gray=grayscaleRows(ctx.getImageData(0,0,W,rows),rows);canvas.width=canvas.height=1;return gray;}
 function groupPending(items){const n=mergeCount(),groups=[];for(let i=0;i<items.length;i+=n)groups.push(items.slice(i,i+n));return groups;}
-function outputTitle(files,groupIndex){const custom=$('title').value.trim();if(custom&&groupIndex===0)return safeName(custom);if(files.length===1)return safeName(files[0].name.replace(/\.pdf$/i,''));const first=safeName(files[0].name.replace(/\.pdf$/i,''));return safeName(`${first}_等${files.length}个PDF`);}
+function outputTitle(files,groupIndex){const custom=$('title').value.trim();if(custom&&groupIndex===0)return safeName(custom);const bases=files.map(f=>safeName(f.name.replace(/\.pdf$/i,'')));if(bases.length===1)return bases[0];const numbered=bases.map(name=>name.match(/^(.*?)(\d+)$/));if(numbered.every(Boolean)&&numbered.every(m=>m[1]===numbered[0][1]&&m[2].length===numbered[0][2].length)){return safeName(`${numbered[0][1]}${numbered[0][2]}-${numbered[numbered.length-1][2]}`);}return safeName(`${bases[0]}-${bases[bases.length-1]}`);}
 
 function schedulePreview(){if(processing)return;clearTimeout(previewTimer);const token=++previewToken;previewTimer=setTimeout(()=>updatePreview(token),220);}
-async function updatePreview(token){const files=queueItems.slice(0,mergeCount()).map(x=>x.file);if(!files.length){preview.style.display='none';preview.width=W;preview.height=H;preview.getContext('2d').clearRect(0,0,W,H);preview.dataset.hasPreview='';return;}preview.style.display='none';preview.width=W;preview.height=H;preview.getContext('2d').clearRect(0,0,W,H);preview.dataset.hasPreview='';setStatus('正在生成最终页面预览…',0);let pdf=null;try{const depth=Number($('depth').value),algo=$('dither').value,threshold=Number($('threshold').value),maskMode=$('maskMode').checked,stitch=$('stitch').checked;const acc={buffer:makeBlankBuffer(),used:0};let finished=false;for(const file of files){if(token!==previewToken)return;pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;for(let pn=1;pn<=pdf.numPages&&!finished;pn++){if(token!==previewToken)return;const page=await pdf.getPage(pn),base=page.getViewport({scale:1}),viewport=page.getViewport({scale:W/base.width}),scaledH=Math.max(1,Math.ceil(viewport.height));for(let top=0;top<scaledH&&!finished;top+=H){if(token!==previewToken)return;const rows=Math.min(H,scaledH-top),gray=await renderPdfRows(pdf,page,top,rows,maskMode);appendRows(acc,gray,rows);if(acc.used===H){processAccumulatedPage(acc,depth,algo,threshold,null,true);finished=true;}}if(!stitch&&!finished&&acc.used>0){processAccumulatedPage(acc,depth,algo,threshold,null,true);finished=true;}page.cleanup?.();}await pdf.destroy();pdf=null;if(finished)break;}if(!finished&&acc.used>0)processAccumulatedPage(acc,depth,algo,threshold,null,true);if(token===previewToken)setStatus(`预览已更新。模式：${depth===2?'4 灰阶 XTCH':'黑白 XTC'}；跨页拼接：${stitch?'开启':'关闭'}；合并组包含 ${files.length} 个 PDF。`,0);}catch(error){if(token===previewToken)setStatus(`预览生成失败：${error?.message||error}`,0);}finally{if(pdf){try{await pdf.destroy();}catch(_){}}}}
+async function updatePreview(token){
+  const files=queueItems.slice(0,1).map(x=>x.file);
+  if(!files.length){preview.style.display='none';preview.width=W;preview.height=H;preview.getContext('2d').clearRect(0,0,W,H);preview.dataset.hasPreview='';return;}
+  preview.style.display='none';preview.width=W;preview.height=H;preview.getContext('2d').clearRect(0,0,W,H);preview.dataset.hasPreview='';setStatus('正在生成最终页面预览…',0);
+  let pdf=null;
+  try{
+    const depth=Number($('depth').value),algo=$('dither').value,threshold=Number($('threshold').value),maskMode=$('maskMode').checked;
+    const acc={buffer:makeBlankBuffer(),used:0};let finished=false;
+    const file=files[0];
+    if(token!==previewToken)return;
+    pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    for(let pn=1;pn<=pdf.numPages&&!finished;pn++){
+      if(token!==previewToken)return;
+      const page=await pdf.getPage(pn),base=page.getViewport({scale:1}),viewport=page.getViewport({scale:W/base.width}),scaledH=Math.max(1,Math.ceil(viewport.height));
+      for(let top=0;top<scaledH&&!finished;top+=H){
+        if(token!==previewToken)return;
+        const rows=Math.min(H,scaledH-top),gray=await renderPdfRows(pdf,page,top,rows,maskMode);
+        let offset=0;
+        while(offset<rows){const take=Math.min(H-acc.used,rows-offset);acc.buffer.set(gray.subarray(offset*W,(offset+take)*W),acc.used*W);acc.used+=take;offset+=take;if(acc.used===H){processAccumulatedPage(acc,depth,algo,threshold,null,true);finished=true;}}
+      }
+      page.cleanup?.();
+    }
+    // Only pad at the end of the PDF, never at the end of each PDF page.
+    if(!finished&&acc.used>0)processAccumulatedPage(acc,depth,algo,threshold,null,true);
+    await pdf.destroy();pdf=null;
+    if(token===previewToken)setStatus(`预览已更新。模式：${depth===2?'4 灰阶 XTCH':'黑白 XTC'}；显示第一份 PDF 内部连续拼接后的第一页。`,0);
+  }catch(error){if(token===previewToken)setStatus(`预览生成失败：${error?.message||error}`,0);}
+  finally{if(pdf){try{await pdf.destroy();}catch(_){}}}
+}
 
-async function convertGroup(group,groupIndex,totalGroups){let pdf=null;const pages=[],acc={buffer:makeBlankBuffer(),used:0};const depth=Number($('depth').value),algo=$('dither').value,threshold=Number($('threshold').value),maskMode=$('maskMode').checked,stitch=$('stitch').checked;let pdfPageCount=0,segments=0;const files=group.map(item=>item.file),title=outputTitle(files,groupIndex);try{for(let fi=0;fi<files.length;fi++){if(cancelled)throw new Error('已取消');const item=group[fi];item.state='转换中';item.progress=0;item.detail=`合并组 ${groupIndex+1}/${totalGroups} · 文件 ${fi+1}/${files.length}`;updateQueueItem(item);pdf=await pdfjsLib.getDocument({data:await files[fi].arrayBuffer()}).promise;pdfPageCount+=pdf.numPages;for(let pn=1;pn<=pdf.numPages;pn++){if(cancelled)throw new Error('已取消');const page=await pdf.getPage(pn),base=page.getViewport({scale:1}),viewport=page.getViewport({scale:W/base.width}),scaledH=Math.max(1,Math.ceil(viewport.height));for(let top=0;top<scaledH;top+=H){if(cancelled)throw new Error('已取消');const rows=Math.min(H,scaledH-top),gray=await renderPdfRows(pdf,page,top,rows,maskMode);let offset=0;while(offset<rows){const room=H-acc.used,take=Math.min(room,rows-offset);acc.buffer.set(gray.subarray(offset*W,(offset+take)*W),acc.used*W);acc.used+=take;offset+=take;if(acc.used===H){processAccumulatedPage(acc,depth,algo,threshold,pages);}}segments++;const progress=Math.min(99,segments/(segments+Math.max(1,pdf.numPages-pn))*100);item.progress=progress;item.detail=`组 ${groupIndex+1}/${totalGroups} · PDF 页 ${pn}/${pdf.numPages} · 文件 ${fi+1}/${files.length}`;setStatus(`正在转换第 ${groupIndex+1}/${totalGroups} 组：${files.map(f=>f.name).join(' + ')}\n${item.detail}\nXTC 页面已生成：${pages.length}`,((groupIndex+progress/100)/totalGroups)*100);updateQueueItem(item);await new Promise(resolve=>setTimeout(resolve,0));}if(!stitch&&acc.used>0)processAccumulatedPage(acc,depth,algo,threshold,pages);page.cleanup?.();}await pdf.destroy();pdf=null;}
-    if(acc.used>0)processAccumulatedPage(acc,depth,algo,threshold,pages);if(cancelled)throw new Error('已取消');setStatus(`正在封装第 ${groupIndex+1} 组…`,((groupIndex+.98)/totalGroups)*100);const book=buildBook(pages,depth===2,title),blob=new Blob([book],{type:'application/octet-stream'}),ext=depth===2?'.xtch':'.xtc';return {blob,outputName:title+ext,pdfPageCount,xtcPages:pages.length,size:book.length};
-  }finally{pages.length=0;if(pdf){try{await pdf.destroy();}catch(_){}}}}
+async function convertGroup(group,groupIndex,totalGroups){
+  let pdf=null;const pages=[],acc={buffer:makeBlankBuffer(),used:0};
+  const depth=Number($('depth').value),algo=$('dither').value,threshold=Number($('threshold').value),maskMode=$('maskMode').checked;
+  let pdfPageCount=0,segments=0;const files=group.map(item=>item.file),title=outputTitle(files,groupIndex);
+  try{
+    for(let fi=0;fi<files.length;fi++){
+      if(cancelled)throw new Error('已取消');
+      const item=group[fi];item.state='转换中';item.progress=0;item.detail=`合并组 ${groupIndex+1}/${totalGroups} · 文件 ${fi+1}/${files.length}`;updateQueueItem(item);
+      pdf=await pdfjsLib.getDocument({data:await files[fi].arrayBuffer()}).promise;pdfPageCount+=pdf.numPages;
+      for(let pn=1;pn<=pdf.numPages;pn++){
+        if(cancelled)throw new Error('已取消');
+        const page=await pdf.getPage(pn),base=page.getViewport({scale:1}),viewport=page.getViewport({scale:W/base.width}),scaledH=Math.max(1,Math.ceil(viewport.height));
+        for(let top=0;top<scaledH;top+=H){
+          if(cancelled)throw new Error('已取消');
+          const rows=Math.min(H,scaledH-top),gray=await renderPdfRows(pdf,page,top,rows,maskMode);let offset=0;
+          while(offset<rows){const take=Math.min(H-acc.used,rows-offset);acc.buffer.set(gray.subarray(offset*W,(offset+take)*W),acc.used*W);acc.used+=take;offset+=take;if(acc.used===H)processAccumulatedPage(acc,depth,algo,threshold,pages);}
+          segments++;
+          const progress=Math.min(99,((fi+(pn/pdf.numPages))/files.length)*99);
+          item.progress=progress;item.detail=`组 ${groupIndex+1}/${totalGroups} · PDF 页 ${pn}/${pdf.numPages} · 文件 ${fi+1}/${files.length}`;
+          setStatus(`正在转换第 ${groupIndex+1}/${totalGroups} 组：${files.map(f=>f.name).join(' + ')}\n${item.detail}\nXTC 页面已生成：${pages.length}`,((groupIndex+progress/100)/totalGroups)*100);
+          updateQueueItem(item);await new Promise(resolve=>setTimeout(resolve,0));
+        }
+        page.cleanup?.();
+      }
+      // PDF boundary: pad its final partial XTC page with white. The next PDF starts fresh.
+      if(acc.used>0)processAccumulatedPage(acc,depth,algo,threshold,pages);
+      await pdf.destroy();pdf=null;
+    }
+    if(cancelled)throw new Error('已取消');
+    setStatus(`正在封装第 ${groupIndex+1} 组…`,((groupIndex+.98)/totalGroups)*100);
+    const book=buildBook(pages,depth===2,title),blob=new Blob([book],{type:'application/octet-stream'}),ext=depth===2?'.xtch':'.xtc';
+    return {blob,outputName:title+ext,pdfPageCount,xtcPages:pages.length,size:book.length};
+  }finally{pages.length=0;if(pdf){try{await pdf.destroy();}catch(_){}}}
+}
 
-go.addEventListener('click',async()=>{const todo=pendingItems();if(!todo.length||processing)return;const groups=groupPending(todo);processing=true;cancelled=false;syncButtons();let finished=0,failed=0;for(let gi=0;gi<groups.length;gi++){if(cancelled)break;const group=groups[gi];for(const item of group){item.state='转换中';item.progress=0;item.error='';}renderQueue();try{const result=await convertGroup(group,gi,groups.length);const first=group[0];first.blob=result.blob;first.outputName=result.outputName;first.state='完成';first.progress=100;first.detail=`合并 ${group.length} 个 PDF · ${result.xtcPages} 个 X3 页面`;first.pageCount=result.pdfPageCount;first.size=result.size;for(const item of group.slice(1)){item.state='已合并';item.detail=`已合并到 ${result.outputName}`;item.progress=100;}finished++;}catch(error){for(const item of group){item.state=error?.message==='已取消'?'已取消':'失败';item.error=error?.message||String(error);}if(error?.message!=='已取消'&&!cancelled)failed++;if(!cancelled)console.error(error);}renderQueue();if(cancelled)break;}processing=false;syncButtons();if(cancelled)setStatus(`本批次已取消。完成 ${finished} 组，失败 ${failed} 组；未处理文件仍保留在队列中。`,null);else setStatus(`本批次结束。成功 ${finished} 组，失败 ${failed} 组。每 ${mergeCount()} 个 PDF 为一组；${successItems().length?'可单独下载每组结果，或打包 ZIP。':''}`,100);});
+go.addEventListener('click',async()=>{const todo=pendingItems();if(!todo.length||processing)return;const groups=groupPending(todo);processing=true;cancelled=false;syncButtons();let finished=0,failed=0;for(let gi=0;gi<groups.length;gi++){if(cancelled)break;const group=groups[gi];const record={files:group.map(x=>x.file),items:group,outputName:outputTitle(group.map(x=>x.file),gi),state:'转换中',progress:0,blob:null,xtcPages:null,size:0,error:''};if(mergeCount()>1)groupResults.push(record);for(const item of group){item.state='转换中';item.progress=0;item.error='';}renderQueue();try{const result=await convertGroup(group,gi,groups.length);record.blob=result.blob;record.outputName=result.outputName;record.state='完成';record.progress=100;record.xtcPages=result.xtcPages;record.size=result.size;const first=group[0];first.blob=result.blob;first.outputName=result.outputName;first.state='完成';first.progress=100;first.detail=`合并 ${group.length} 个 PDF · ${result.xtcPages} 个 X3 页面`;first.pageCount=result.pdfPageCount;first.size=result.size;for(const item of group.slice(1)){item.state='已合并';item.detail='';item.progress=100;}finished++;}catch(error){record.state=error?.message==='已取消'?'已取消':'失败';record.error=error?.message||String(error);for(const item of group){item.state=error?.message==='已取消'?'已取消':'失败';item.error=error?.message||String(error);}if(error?.message!=='已取消'&&!cancelled)failed++;if(!cancelled)console.error(error);}renderQueue();if(cancelled)break;}processing=false;syncButtons();if(cancelled)setStatus(`本批次已取消。完成 ${finished} 组，失败 ${failed} 组；未处理文件仍保留在队列中。`,null);else setStatus(`本批次结束。成功 ${finished} 组，失败 ${failed} 组。${mergeCount()>1?'每组生成一个 XTC/XTCH 文件。':'每份 PDF 单独输出。'} ${successItems().length?'可下载转换结果，或另行打包 ZIP。':''}`,100);});
 zipButton.addEventListener('click',async()=>{const ready=successItems();if(!ready.length||processing)return;if(!window.JSZip){setStatus('ZIP 组件未能加载，请检查网络后刷新页面再试。',0);return;}zipButton.disabled=true;try{const zip=new window.JSZip(),used=new Set();for(const item of ready){let name=item.outputName||'converted.xtc',base=name,seq=2;while(used.has(name.toLowerCase())){const dot=base.lastIndexOf('.');name=dot>0?`${base.slice(0,dot)} (${seq})${base.slice(dot)}`:`${base} (${seq})`;seq++;}used.add(name.toLowerCase());zip.file(name,item.blob,{binary:true});}setStatus(`正在打包 ${ready.length} 个结果为 ZIP…`,0);const blob=await zip.generateAsync({type:'blob',compression:'STORE'},metadata=>setStatus(`正在打包 ZIP：${Math.round(metadata.percent)}%`,metadata.percent));downloadBlob(blob,'X3-XTC-批量转换结果.zip');setStatus(`ZIP 打包完成。包含 ${ready.length} 个文件，大小 ${humanSize(blob.size)}。`,100);}catch(error){console.error(error);setStatus(`ZIP 打包失败：${error?.message||error}`,0);}finally{syncButtons();}});
 renderQueue();
