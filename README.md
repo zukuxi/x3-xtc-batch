@@ -15,3 +15,21 @@
 https://zukuxi.github.io/x3-xtc-batch/
 
 编码结构参考 srokl/xtcjsapp 的 xtc_converter.js（MIT 项目）
+
+X3 PDF Batch Converter to XTC / XTCH
+
+This tool was created to handle PDFs that contain masks, which can cause standard conversion to produce black pages. However, some of these PDFs can also be converted successfully without enabling the mask compatibility option. The option is retained as a fallback: leave it unchecked for faster conversion, and enable it only if the output appears black.
+
+- Select multiple PDF files or import PDFs from a folder.
+- Pages within each PDF are stitched together continuously without overlapping or losing content. At the end of each PDF, the final page is padded with white to fill the 528 × 792 output dimensions if necessary. Each subsequent PDF starts on a new XTC page, so content from different PDFs is never stitched together.
+- Choose to combine every 1, 2, 3, 4, 5, 10, or 20 PDFs into a single XTC/XTCH file. In merge mode, the queue displays each group's output result at the top. The source PDF list does not redundantly display “Output” or “Merged into” labels.
+- Output filenames preserve consecutive numbering whenever possible. For example, "a01.pdf" + "a02.pdf" produces "a01-02.xtc".
+- When set to 1 PDF per output, each PDF is converted into a separate file, with a download button displayed next to its corresponding queue item.
+- Automatically generates a final grayscale/dithered preview of the first PDF after selection. Adjusting the processing settings regenerates the preview.
+- All processing takes place locally in your browser. No files are uploaded.
+
+Dependencies: PDF.js 5.4.624 and JSZip 3.10.1 (via cdnjs).
+
+The encoding structure is based on "xtc_converter.js" from the MIT-licensed project "srokl/xtcjsapp" (https://github.com/srokl/xtcjsapp).
+
+Web app: https://zukuxi.github.io/x3-xtc-batch/
