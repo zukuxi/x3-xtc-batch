@@ -22,3 +22,6 @@
 - Dithering: Atkinson, Floyd–Steinberg, Stucki, Ostromoukhov, Zhou–Fang, Sierra Lite, Ordered, Matt Parker, Stochastic, and no-dither threshold mode.
 - Contrast: None, Light, Medium, Strong, and Maximum. Contrast and dithering are applied to the final output; the fast crop preview does not run either operation.
 - Stochastic uses a Hilbert-curve traversal and is more computationally expensive. For large batches, Atkinson or Floyd–Steinberg is recommended.
+
+- The interface supports Chinese and English.
+- The live preview crops the top 528 × 792 area of the first PDF page, converts it using the selected grayscale/dithering/contrast settings, and caches the raw grayscale crop. Changing processing settings reuses the cached crop instead of reloading the PDF; toggling mask compatibility rerenders the already-loaded PDF only.
