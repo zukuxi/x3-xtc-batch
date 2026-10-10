@@ -27,7 +27,7 @@
   <div class="actions"><button id="go" disabled data-i18n="startConvert">开始转换</button><button id="cancel" class="secondary" disabled data-i18n="cancelBatch">取消当前批次</button><button id="zip" class="secondary" disabled data-i18n="downloadZip">下载全部成功结果 ZIP</button></div>
   <div class="progress"><div class="bar" id="bar"></div></div><div id="status" class="status">请选择 PDF 文件或文件夹。</div>
 </section>
-<section class="panel"><strong data-i18n="previewTitle">实时预览（首个 PDF 第一页顶部裁切）</strong><p class="hint" data-i18n="previewHint">选择 PDF 后，截取第一份 PDF 第 1 页按宽度缩放后的顶部 528 × 792 区域，并转换成当前选择的灰度/抖动效果。原始灰度裁切只渲染并缓存一次；修改灰度、算法、阈值或对比度时，只对缓存图像重新处理，不会重新加载 PDF。切换蒙版兼容模式时会在已加载的 PDF 上重新渲染。</p><canvas id="preview" width="528" height="792" aria-label="转换后的灰度预览"></canvas></section>
+<section class="panel"><strong data-i18n="previewTitle">实时预览</strong><p class="hint" data-i18n="previewHint">选择PDF后，根据当前选择的灰度/抖动效果实时显示第一页的预览。</p><canvas id="preview" width="528" height="792" aria-label="转换后的灰度预览"></canvas></section>
 <p class="footer"><span data-i18n="footerPrefix">编码参考：</span><a href="https://github.com/srokl/xtcjsapp" target="_blank" rel="noopener noreferrer">srokl/xtcjsapp（MIT）</a><span data-i18n="footerSuffix"> 的 XTG、XTH 与 XTC 容器结构。ZIP 使用 JSZip；PDF 使用 PDF.js。GitHub Pages 可直接托管。</span></p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
