@@ -10,12 +10,13 @@
 
 依赖 PDF.js 5.4.624 与 JSZip 3.10.1（cdnjs）。
 
-
 ## 灰度与图像处理选项
 
 - 抖动算法：Atkinson、Floyd–Steinberg、Stucki、Ostromoukhov、Zhou–Fang、Sierra Lite、Ordered、Matt Parker、Stochastic，以及无抖动阈值模式。
 - 对比度：None、Light、Medium、Strong、Maximum。对比度和抖动应用于最终输出；快速裁切预览不执行这些处理。
 - Stochastic 使用 Hilbert 曲线处理，计算量较大；大量页面转换时建议优先使用 Atkinson 或 Floyd–Steinberg。
+
+- https://zukuxi.github.io/x3-xtc-batch/
 
 ## Image processing options
 
