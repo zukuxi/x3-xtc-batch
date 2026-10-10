@@ -18,6 +18,20 @@
 
 - https://zukuxi.github.io/x3-xtc-batch/
 
+
+X3 PDF Batch Converter to XTC / XTCH
+
+- Select multiple PDFs or import PDFs from a folder.
+- Pages within each PDF are stitched together continuously, without overlap or content loss. If the last page of a PDF does not fill the 528 × 792 canvas, the remaining area is padded with white. Each new PDF starts on a new XTC page, so its content is never stitched onto the end of the previous PDF.
+- Choose to output one XTC/XTCH file for every 1, 2, 3, 4, 5, 10, or 20 PDFs. In merge mode, all output results are displayed together at the top of the queue. The source PDF list does not redundantly display “Output” or “Merged into” labels.
+- Merged filenames attempt to preserve consecutive numbering. For example, "a01.pdf" + "a02.pdf" produces "01-02.xtc".
+- When 1 PDF is selected, each PDF is output as a separate file, with a download button displayed to the right of its corresponding queue item.
+- After selecting PDFs, a quick preview displays the top 528 × 792 crop of the first page of the first PDF, scaled to fit the width. The preview does not perform stitching, dithering, or XTC/XTCH encoding. It is re-rendered only when the mask compatibility mode is toggled.
+- All files are processed locally in your browser and are never uploaded.
+
+Dependencies: PDF.js 5.4.624 and JSZip 3.10.1 (cdnjs).
+
+
 ## Image processing options
 
 - Dithering: Atkinson, Floyd–Steinberg, Stucki, Ostromoukhov, Zhou–Fang, Sierra Lite, Ordered, Matt Parker, Stochastic, and no-dither threshold mode.
